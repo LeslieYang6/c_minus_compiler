@@ -1,0 +1,13 @@
+int x;
+
+int myFunction (int z, int y) {
+    x = 4+x * (3 * y);
+}
+
+int y;
+
+int mySecondFunction (void) {
+    if (y >= 10) {
+        y = y - 1;
+    }
+}
