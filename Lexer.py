@@ -13,6 +13,7 @@ for i in range(len(simbolos)):
 
 global linea
 linea = ''
+
 def setLineaGlobal(linea):
     global line
     line = linea

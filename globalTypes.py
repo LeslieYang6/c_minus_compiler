@@ -75,7 +75,27 @@ class NodeKind(Enum):
     new_else = 31
     assign = 32
 
+class NodeType(Enum):
+    StmtK = 0
+    ExpK = 1
 
+class StmtKind(Enum):
+    IfK = 0
+    RepeatK = 1
+    AssignK = 2
+    ReadK = 3
+    WriteK = 4
+
+class ExpKind(Enum):
+    OpK = 0
+    ConstK = 1
+    IdK = 2
+
+# ExpType is used for type checking
+class ExpType(Enum):
+    Void = 0
+    Integer = 1
+    Boolean = 2
 
 # Maximo numero de hijos por nodo (3 para el if)
 MAXCHILDREN = 3
@@ -88,6 +108,7 @@ class TreeNode:
         self.sibling = None                # tipo treeNode
         self.lineno = 0                    # tipo int
         self.node_kind = None              # tipo NodeKind, en globalTypes
+        self.node_type = None              # tipo NodeKind, en globalTypes
 
         # en realidad los dos siguientes deberian ser uno solo (kind)
         # siendo la  union { StmtKind stmt; ExpKind exp;}
@@ -101,4 +122,6 @@ class TreeNode:
         self.name = None                  # tipo String
 
         # for type checking of exps
-        self.type = None                  # de tipo ExpType
+        self.type = None
+        self.scope = None
+        self.inout = False

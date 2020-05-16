@@ -1,13 +1,9 @@
-int x;
+int a;
 
-int myFunction (int z, int y) {
-    x = 4+x * (3 * y);
-}
+void newNode(int yes) {
+    a = u + 1 / yes;
 
-int y;
-
-int mySecondFunction (void) {
-    if (y >= 10) {
-        y = y - 1;
+    if(yes >= a) {
+        newNode();
     }
 }

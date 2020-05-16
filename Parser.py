@@ -1,18 +1,20 @@
 from globalTypes import *
 from Lexer import *
+from symbolsTable import *
+from semantica import *
 
 token = None  # holds current token
 tokenString = None  # holds the token string value
 Error = False
 SintaxTree = None
 imprimeScanner = False
-
+scopeAux = 0
 
 def syntax_error(message):
     global Error
     l = getLineaGlobal()
     print("")
-    print(">>> Syntax error at line " + str(lineNumber + 2) + ": " + message)
+    print(">>> Syntax error at line " + str(lineNumber + 1) + ": " + message)
     print(">>> " + l + " <<<")
     print("    " + " " * len(l) + "^")
     Error = True
@@ -80,7 +82,6 @@ def match(expected):
         return True
     else:
         syntax_error("@match() unexpected token -> ")
-        # print_token(token,tokenString)
         return False
 
 
@@ -95,9 +96,8 @@ def program():
         ignore_comment()
 
     t = new_node(NodeKind.program)
-    # print("Address of T @program: " + str(t))
+
     t.child[0] = declaration_list()
-    # print("Address of T.child[0] @program: " + str(t.child[0]))
 
     return t
 
@@ -112,7 +112,7 @@ def declaration_list():
 
     p = t
     while token is not TokenType.ENDFILE:
-        print("")
+        print
         q = declaration()
         if q is not None:
             if t is None:
@@ -124,7 +124,7 @@ def declaration_list():
 
 
 def declaration():
-    global token, tokenString, lineNumber
+    global token, tokenString, lineNumber, scopeAux
     if token is TokenType.COMMENT:
         ignore_comment()
 
@@ -137,12 +137,23 @@ def declaration():
     if token is TokenType.SEMICOLON or token is TokenType.O_BRACKET:
         # Create new Var-Declaration Node
         t.child[1] = var_dec()
+        t.child[1].node_type = NodeType.StmtK
+        t.child[1].stmt = StmtKind.AssignK
+
         t.child[1].val = aux
+        t.child[1].name = aux
+        t.child[1].type = t.child[0].type
 
     elif token is TokenType.O_PAR:
-        # Create new Func-Declaration Node
         t.child[1] = func_dec()
+        t.child[1].node_type = NodeType.StmtK
+        t.child[1].stmt = StmtKind.AssignK
+
         t.child[1].val = aux
+        t.child[1].name = aux
+        t.child[1].type = t.child[0].type
+
+        t.child[1].scope = scopeAux + 1
 
     else:
         syntax_error("@declaration() unexpected token -> ")
@@ -157,6 +168,7 @@ def var_dec():
         ignore_comment()
 
     t = new_node(NodeKind.var_dec)
+    t.lineno = lineNumber
 
     if token is TokenType.SEMICOLON:
         match(TokenType.SEMICOLON)
@@ -180,16 +192,16 @@ def type():
         ignore_comment()
 
     t = new_node(NodeKind.type)
-    # print("Address of T @type: " + str(t))
 
     if token == TokenType.INT:
-        # Match it is a INT type
         t.val = tokenString
+        t.type = TokenType.INT
         match(TokenType.INT)
         return t
+
     elif token == TokenType.VOID:
-        # Match it is a VOID type
         t.val = tokenString
+        t.type = TokenType.VOID
         match(TokenType.VOID)
         return t
 
@@ -197,11 +209,13 @@ def type():
 
 
 def func_dec():
-    global token, tokenString, lineNumber
+    global token, tokenString, lineNumber, scopeAux
+
     if token == TokenType.COMMENT:
         ignore_comment()
 
     t = new_node(NodeKind.func_dec)
+    t.lineno = lineNumber
 
     if token == TokenType.O_PAR:
         match(TokenType.O_PAR)
@@ -241,7 +255,7 @@ def params_list():
     if token == TokenType.C_PAR:
         syntax_error("@params_list() expected parameter -> ")
 
-    if token == TokenType.INT or token == TokenType.VOID:
+    if token == TokenType.INT:
         t.child[0] = param()
 
         if token == TokenType.COMA:
@@ -266,6 +280,13 @@ def param():
         t.child[0] = type()
 
         t.val = tokenString
+        t.name = tokenString
+        t.lineno = lineNumber
+
+        t.node_type = NodeType.StmtK
+        t.stmt = StmtKind.AssignK
+        t.type = t.child[0].type
+
         match(TokenType.ID)
 
         if token is TokenType.O_BRACKET:
@@ -280,6 +301,7 @@ def param():
 
 
 def compound_stmt():
+    global inout
     global token, tokenString, lineNumber
     if token == TokenType.COMMENT:
         ignore_comment()
@@ -289,8 +311,10 @@ def compound_stmt():
     if token == TokenType.O_CURLY:
         match(TokenType.O_CURLY)
 
+        inout = True
         if token == TokenType.C_CURLY:
             match(TokenType.C_CURLY)
+            inout = False
         else:
             # Check if there is any local variable declaration
             if token == TokenType.INT or token == TokenType.VOID:
@@ -302,6 +326,7 @@ def compound_stmt():
                 t.child[0] = statement_list()
 
             match(TokenType.C_CURLY)
+            inout = False
 
     return t
 
@@ -311,7 +336,6 @@ def local():
     if token == TokenType.COMMENT:
         ignore_comment()
 
-    # print(token)
     t = new_node(NodeKind.local)
 
     t = declaration()
@@ -335,7 +359,7 @@ def statement_list():
 
 
 def stmt():
-    global token, tokenString, lineNumber
+    global token, tokenString, lineNumber, inout
     if token is TokenType.COMMENT:
         ignore_comment()
 
@@ -397,8 +421,11 @@ def if_stmt():
         ignore_comment()
 
     t = new_node(NodeKind.if_stmt)
+    t.node_type = NodeType.StmtK
+    t.stmt = StmtKind.IfK
 
     t.val = tokenString
+    t.name = tokenString
     match(TokenType.IF)
 
     if token is TokenType.O_PAR:
@@ -429,8 +456,11 @@ def loop_stmt():
         ignore_comment()
 
     t = new_node(NodeKind.loop_stmt)
+    t.node_type = NodeType.StmtK
+    t.stmt = StmtKind.RepeatK
 
     t.val = tokenString
+    t.name = tokenString
     match(TokenType.WHILE)
 
     if token is TokenType.O_PAR:
@@ -475,19 +505,7 @@ def exp():
 
     t = new_node(NodeKind.exp)
 
-    if token is TokenType.NUM:
-        t.child[0] = simple_exp()
-
-    if token is TokenType.ID:
-        t.child[0] = simple_exp()
-
-        if token is TokenType.EQUALS:
-            t.child[1] = new_node(NodeKind.assign)
-            t.child[1].val = tokenString
-
-            match(TokenType.EQUALS)
-
-            t.child[2] = simple_exp()
+    t.child[0] = simple_exp()
 
     return t
 
@@ -499,11 +517,20 @@ def var():
 
     t = new_node(NodeKind.var)
 
+    t.name = tokenString
     t.val = tokenString
-    #print "Found: " + tokenString
+    t.lineno = lineNumber
+
+    t.node_type = NodeType.StmtK
+    t.stmt = StmtKind.AssignK
+    t.type = TokenType.INT
+
     match(TokenType.ID)
 
     if token is TokenType.O_BRACKET:
+        t.node_type = NodeType.StmtK
+        t.stmt = StmtKind.ReadK
+
         match(TokenType.O_BRACKET)
 
         t.child[0] = exp()
@@ -522,13 +549,14 @@ def simple_exp():
 
     t.child[0] = add_exp()
 
-    if token is TokenType.SEMICOLON or token is TokenType.C_PAR or token is TokenType.COMA:
-        return t
-
     if token is TokenType.BIGGER or token is TokenType.SMALLER or token is TokenType.EQUALS or token is TokenType.EXC:
         t.child[1] = rel_op()
 
-    if token is not TokenType.C_PAR or token is not TokenType.SEMICOLON:
+        t.child[2] = exp()
+
+    if token == TokenType.SEMICOLON or token is TokenType.C_PAR or token is TokenType.COMA:
+        return t
+    else:
         t.sibling = simple_exp()
 
     return t
@@ -545,14 +573,8 @@ def rel_op():
     if token is TokenType.EQUALS:
         match(TokenType.EQUALS)
 
-        if token is TokenType.ID or token is TokenType.NUM:
-            t.child[0] =  simple_exp()
-
         if token is not TokenType.EQUALS:
-            tokenString = '='
-            token = TokenType.EQUALS
-            t.op = tokenString
-            match(TokenType.EQUALS)
+            t.op = '='
             return t
 
         elif token is TokenType.EQUALS:
@@ -721,10 +743,17 @@ def factor():
     t = new_node(NodeKind.factor)
 
     if token is TokenType.ID:
+        aux = tokenString
         t.child[0] = var()
 
         if token is TokenType.O_PAR:
             t.child[1] = call()
+
+            #t.child[1].node_type = NodeType.ExpK
+            #t.child[1].exp = ExpKind.IdK
+            #t.child[1].val = aux
+            #t.child[1].name = aux
+            #t.child[1].lineno = lineNumber
 
             t.sibling = new_node(NodeKind.closingP)
             t.sibling.val = ')'
@@ -885,18 +914,19 @@ def print_tree(tree):
 # constructed syntax tree
 def parser(imprime):
     global token, tokenString, lineNumber
+
     token, tokenString, lineNumber = getToken(imprimeScanner)
     t = program()
 
     if token is not TokenType.ENDFILE:
         syntax_error("Code ends before file\n")
-    if imprime:
-        print("")
+
+    if imprime is True:
+        print
         print(" --- AST ---")
-        print("")
+        print
         print_tree(t)
-        return t, Error
 
-    print
+        return t
 
-    return
+    return t
