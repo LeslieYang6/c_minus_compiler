@@ -12,4 +12,4 @@ posicion = 0                            # posicion del caracter actual del strin
 globales(programa, posicion, progLong)
 
 AST = parser(True)
-semantica(AST, False)
+semantica(AST, True)
