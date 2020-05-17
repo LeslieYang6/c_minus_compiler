@@ -671,6 +671,9 @@ def add_exp():
 
         t.child[1] = term()
 
+        print t.child[1].type
+        t.type = t.child[1].type
+
         if token is TokenType.PLUS or token == TokenType.MINUS:
             t.sibling = add_exp()
 
@@ -708,6 +711,7 @@ def term():
         t.child[0] = mul_op()
 
         t.child[1] = factor()
+        t.type = t.child[1].type
 
         if token is TokenType.ASTERISC or token == TokenType.SLASH:
             t.sibling = term()
@@ -745,15 +749,10 @@ def factor():
     if token is TokenType.ID:
         aux = tokenString
         t.child[0] = var()
+        t.type = t.child[0].type
 
         if token is TokenType.O_PAR:
             t.child[1] = call()
-
-            #t.child[1].node_type = NodeType.ExpK
-            #t.child[1].exp = ExpKind.IdK
-            #t.child[1].val = aux
-            #t.child[1].name = aux
-            #t.child[1].lineno = lineNumber
 
             t.sibling = new_node(NodeKind.closingP)
             t.sibling.val = ')'
@@ -768,6 +767,7 @@ def factor():
 
             return t
 
+        t.type = TokenType.INT
         return t
 
     elif token is TokenType.O_PAR:
@@ -923,7 +923,7 @@ def parser(imprime):
 
     if imprime is True:
         print
-        print(" --- AST ---")
+        print("-------------------------[ AST ]---------------------------")
         print
         print_tree(t)
 

@@ -75,6 +75,15 @@ def buildSymTab(tree, imprime):
         printSymTab()
 
 
+def checkNode(t):
+    if t.node_kind is NodeKind.var_dec and t.val == "void":
+        typeError(t, "Variables cannot be of type VOID")
+
+
+def typeCheck(syntaxTree):
+    traverse(syntaxTree,nullProc,checkNode)
+
+
 def tabla(tree, imprime):
     global scopeNum
 
@@ -91,5 +100,10 @@ def semantica(tree, imprime):
     scopeNum += 1
 
     tabla(tree, imprime)
+    print
+    print
+    print("--------------------[ TYPE VERIFY ]----------------------")
+    print
+    typeCheck(tree)
 
     return
